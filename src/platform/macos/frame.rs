@@ -1,4 +1,3 @@
-use core::time::Duration;
 use std::ffi::c_void;
 
 use objc2_core_video::{
@@ -8,9 +7,36 @@ use objc2_core_video::{
     CVPixelBufferGetWidth,
 };
 
-use crate::frame::{Frame, Plane};
+use crate::frame::{Frame, Plane, Timestamp};
 use crate::platform::macos::device::fourcc_to_pixel_format;
-use crate::types::{PixelFormat, Resolution};
+use crate::types::{PixelFormat, Size};
+
+/// A presentation timestamp mirroring Core Media's `CMTime`.
+///
+/// Preserves the full precision and semantics of the underlying `CMTime`,
+/// including flags and epoch. For a quick seconds value, use
+/// [`as_secs_f64()`](Timestamp::as_secs_f64).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MacosTimestamp {
+    /// The numerator of the time value (ticks).
+    pub value: i64,
+    /// Ticks per second.
+    pub timescale: i32,
+    /// CMTime flags (valid, has been rounded, positive/negative infinity, indefinite).
+    pub flags: u32,
+    /// Distinguishes separate timelines that may restart from zero.
+    pub epoch: i64,
+}
+
+impl Timestamp for MacosTimestamp {
+    fn as_secs_f64(&self) -> f64 {
+        if self.timescale > 0 {
+            self.value as f64 / self.timescale as f64
+        } else {
+            0.0
+        }
+    }
+}
 
 /// A video frame backed by a `CVPixelBuffer`.
 /// Only valid within the callback scope.
@@ -18,8 +44,8 @@ pub struct MacosFrame<'a> {
     pixel_buffer: &'a CVPixelBuffer,
     planes: Vec<Plane<'a>>,
     pixel_format: PixelFormat,
-    resolution: Resolution,
-    timestamp: Duration,
+    size: Size,
+    timestamp: MacosTimestamp,
 }
 
 impl<'a> MacosFrame<'a> {
@@ -27,13 +53,13 @@ impl<'a> MacosFrame<'a> {
     /// SAFETY: The pixel buffer base address must be locked for the lifetime 'a.
     pub(crate) unsafe fn from_locked_pixel_buffer(
         pixel_buffer: &'a CVPixelBuffer,
-        timestamp: Duration,
+        timestamp: MacosTimestamp,
     ) -> Self {
         let width = CVPixelBufferGetWidth(pixel_buffer);
         let height = CVPixelBufferGetHeight(pixel_buffer);
         let fourcc = CVPixelBufferGetPixelFormatType(pixel_buffer);
         let pixel_format = fourcc_to_pixel_format(fourcc).unwrap_or(PixelFormat::Nv12);
-        let resolution = Resolution {
+        let size = Size {
             width: width as u32,
             height: height as u32,
         };
@@ -76,7 +102,7 @@ impl<'a> MacosFrame<'a> {
             pixel_buffer,
             planes,
             pixel_format,
-            resolution,
+            size,
             timestamp,
         }
     }
@@ -88,19 +114,21 @@ impl<'a> MacosFrame<'a> {
 }
 
 impl<'a> Frame for MacosFrame<'a> {
+    type Timestamp = MacosTimestamp;
+
     fn pixel_format(&self) -> PixelFormat {
         self.pixel_format
     }
 
-    fn resolution(&self) -> Resolution {
-        self.resolution
+    fn size(&self) -> Size {
+        self.size
     }
 
     fn planes(&self) -> &[Plane<'_>] {
         &self.planes
     }
 
-    fn timestamp(&self) -> Duration {
+    fn timestamp(&self) -> MacosTimestamp {
         self.timestamp
     }
 }

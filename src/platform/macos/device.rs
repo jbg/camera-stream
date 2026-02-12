@@ -75,7 +75,7 @@ pub(crate) fn format_to_descriptor(format: &AVCaptureDeviceFormat) -> Option<For
     let pixel_format = fourcc_to_pixel_format(media_sub_type)?;
 
     let dims = unsafe { CMVideoFormatDescriptionGetDimensions(&desc) };
-    let resolution = Resolution {
+    let size = Size {
         width: dims.width as u32,
         height: dims.height as u32,
     };
@@ -95,7 +95,7 @@ pub(crate) fn format_to_descriptor(format: &AVCaptureDeviceFormat) -> Option<For
 
     Some(FormatDescriptor {
         pixel_format,
-        resolution,
+        size,
         frame_rate_ranges,
     })
 }

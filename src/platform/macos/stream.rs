@@ -1,4 +1,3 @@
-use core::time::Duration;
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex};
 
@@ -20,7 +19,7 @@ use objc2_foundation::{NSDictionary, NSNumber, NSObjectProtocol, NSString};
 
 use crate::error::{Error, PlatformError};
 use crate::platform::macos::device::pixel_format_to_fourcc;
-use crate::platform::macos::frame::MacosFrame;
+use crate::platform::macos::frame::{MacosFrame, MacosTimestamp};
 use crate::stream::CameraStream;
 use crate::types::StreamConfig;
 
@@ -68,11 +67,11 @@ define_class!(
 
             // Get timestamp
             let cm_time = unsafe { sample_buffer.presentation_time_stamp() };
-            let timestamp = if cm_time.timescale > 0 {
-                let secs = cm_time.value as f64 / cm_time.timescale as f64;
-                Duration::from_secs_f64(secs.max(0.0))
-            } else {
-                Duration::ZERO
+            let timestamp = MacosTimestamp {
+                value: cm_time.value,
+                timescale: cm_time.timescale,
+                flags: cm_time.flags.0,
+                epoch: cm_time.epoch,
             };
 
             // Lock, build frame, call callback, unlock
@@ -153,8 +152,8 @@ impl MacosCameraStream {
             let dims = unsafe { objc2_core_media::CMVideoFormatDescriptionGetDimensions(&desc) };
 
             if sub_type == target_fourcc
-                && dims.width as u32 == config.resolution.width
-                && dims.height as u32 == config.resolution.height
+                && dims.width as u32 == config.size.width
+                && dims.height as u32 == config.size.height
             {
                 matched_format = Some(format.clone());
                 break;

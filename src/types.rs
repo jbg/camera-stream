@@ -16,9 +16,9 @@ pub enum PixelFormat {
     Jpeg,
 }
 
-/// Image resolution.
+/// Pixel dimensions of a frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Resolution {
+pub struct Size {
     pub width: u32,
     pub height: u32,
 }
@@ -48,7 +48,7 @@ pub struct FrameRateRange {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormatDescriptor {
     pub pixel_format: PixelFormat,
-    pub resolution: Resolution,
+    pub size: Size,
     pub frame_rate_ranges: Vec<FrameRateRange>,
 }
 
@@ -56,6 +56,6 @@ pub struct FormatDescriptor {
 #[derive(Debug, Clone)]
 pub struct StreamConfig {
     pub pixel_format: PixelFormat,
-    pub resolution: Resolution,
+    pub size: Size,
     pub frame_rate: FrameRate,
 }

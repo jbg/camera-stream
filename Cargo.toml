@@ -1,11 +1,15 @@
 [package]
 name = "camera-stream"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jasper Hugo <jasper@jasperhugo.com>"]
 edition = "2024"
 description = "A cross-platform library for streaming frames from cameras, initially supporting only macOS"
 repository = "https://github.com/jbg/camera-stream"
 license = "MIT OR Apache-2.0"
+
+[package.metadata.docs.rs]
+default-target = "x86_64-apple-darwin"
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["std"]

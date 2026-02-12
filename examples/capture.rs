@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use camera_stream::device::{CameraDevice, CameraManager};
-use camera_stream::frame::Frame;
+use camera_stream::frame::{Frame, Timestamp};
 use camera_stream::stream::CameraStream;
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
     {
         use camera_stream::platform::macos::device::MacosCameraManager;
 
-        let manager = MacosCameraManager::new();
+        let manager = MacosCameraManager::default();
 
         // Discover devices
         let devices = manager
@@ -43,8 +43,8 @@ fn main() {
                 "  [{}] {:?} {}x{} ({} frame rate range(s))",
                 i,
                 f.pixel_format,
-                f.resolution.width,
-                f.resolution.height,
+                f.size.width,
+                f.size.height,
                 f.frame_rate_ranges.len(),
             );
             for rr in &f.frame_rate_ranges {
@@ -66,7 +66,7 @@ fn main() {
                 );
                 camera_stream::StreamConfig {
                     pixel_format: f.pixel_format,
-                    resolution: f.resolution,
+                    size: f.size,
                     frame_rate: rate,
                 }
             } else {
@@ -77,8 +77,8 @@ fn main() {
         println!(
             "\nOpening with {:?} {}x{} @ {:.1} fps",
             config.pixel_format,
-            config.resolution.width,
-            config.resolution.height,
+            config.size.width,
+            config.size.height,
             config.frame_rate.as_f64(),
         );
 
@@ -97,8 +97,8 @@ fn main() {
                     "Frame {}: {:?} {}x{} ts={:.3}s planes={} bytes={}",
                     n,
                     frame.pixel_format(),
-                    frame.resolution().width,
-                    frame.resolution().height,
+                    frame.size().width,
+                    frame.size().height,
                     frame.timestamp().as_secs_f64(),
                     planes.len(),
                     total_bytes,
