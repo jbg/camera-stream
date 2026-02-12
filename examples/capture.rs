@@ -14,9 +14,10 @@ fn main() {
         let manager = MacosCameraManager::default();
 
         // Discover devices
-        let devices = manager
+        let devices: Vec<_> = manager
             .discover_devices()
-            .expect("failed to discover devices");
+            .expect("failed to discover devices")
+            .collect();
         println!("Found {} camera(s):", devices.len());
         for (i, dev) in devices.iter().enumerate() {
             println!("  [{}] {} (id: {})", i, dev.name(), dev.id());
@@ -36,7 +37,7 @@ fn main() {
         println!("\nUsing: {} ({})", device.name(), device.id());
 
         // Print supported formats
-        let formats = device.supported_formats().expect("failed to get formats");
+        let formats: Vec<_> = device.supported_formats().expect("failed to get formats").collect();
         println!("\nSupported formats ({} total):", formats.len());
         for (i, f) in formats.iter().take(10).enumerate() {
             println!(
@@ -45,9 +46,9 @@ fn main() {
                 f.pixel_format,
                 f.size.width,
                 f.size.height,
-                f.frame_rate_ranges.len(),
+                f.frame_rate_ranges().len(),
             );
-            for rr in &f.frame_rate_ranges {
+            for rr in f.frame_rate_ranges() {
                 println!("       {:.1}-{:.1} fps", rr.min.as_f64(), rr.max.as_f64(),);
             }
         }
@@ -58,7 +59,7 @@ fn main() {
         // Pick first format or a reasonable default
         let config =
             if let Some(f) = formats.first() {
-                let rate = f.frame_rate_ranges.first().map(|r| r.max).unwrap_or(
+                let rate = f.frame_rate_ranges().first().map(|r| r.max).unwrap_or(
                     camera_stream::FrameRate {
                         numerator: 30000,
                         denominator: 1000,

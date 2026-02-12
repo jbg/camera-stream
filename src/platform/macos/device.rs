@@ -1,5 +1,3 @@
-use std::string::String;
-
 use objc2::rc::Retained;
 use objc2_av_foundation::{AVCaptureDevice, AVCaptureDeviceFormat, AVMediaTypeVideo};
 use objc2_core_media::CMVideoFormatDescriptionGetDimensions;
@@ -17,26 +15,26 @@ impl CameraManager for MacosCameraManager {
     type Device = MacosCameraDevice;
     type Error = Error;
 
-    fn discover_devices(&self) -> Result<Vec<Self::Device>, Self::Error> {
+    fn discover_devices(&self) -> Result<impl Iterator<Item = Self::Device>, Self::Error> {
         let media_type = unsafe { AVMediaTypeVideo }.ok_or_else(|| {
             Error::Platform(PlatformError::Message(
-                "AVMediaTypeVideo not available".into(),
+                "AVMediaTypeVideo not available",
             ))
         })?;
 
         #[allow(deprecated)]
-        let devices = unsafe { AVCaptureDevice::devicesWithMediaType(media_type) };
-
-        Ok(devices
+        let devices: Vec<_> = unsafe { AVCaptureDevice::devicesWithMediaType(media_type) }
             .iter()
             .map(|d| MacosCameraDevice::new(d.clone()))
-            .collect())
+            .collect();
+
+        Ok(devices.into_iter())
     }
 
     fn default_device(&self) -> Result<Option<Self::Device>, Self::Error> {
         let media_type = unsafe { AVMediaTypeVideo }.ok_or_else(|| {
             Error::Platform(PlatformError::Message(
-                "AVMediaTypeVideo not available".into(),
+                "AVMediaTypeVideo not available",
             ))
         })?;
 
@@ -69,10 +67,12 @@ impl MacosCameraDevice {
     }
 }
 
-pub(crate) fn format_to_descriptor(format: &AVCaptureDeviceFormat) -> Option<FormatDescriptor> {
+pub(crate) fn format_to_descriptors(
+    format: &AVCaptureDeviceFormat,
+) -> impl Iterator<Item = FormatDescriptor> + use<> {
     let desc = unsafe { format.formatDescription() };
     let media_sub_type = unsafe { desc.media_sub_type() };
-    let pixel_format = fourcc_to_pixel_format(media_sub_type)?;
+    let pixel_format = fourcc_to_pixel_format(media_sub_type);
 
     let dims = unsafe { CMVideoFormatDescriptionGetDimensions(&desc) };
     let size = Size {
@@ -81,7 +81,7 @@ pub(crate) fn format_to_descriptor(format: &AVCaptureDeviceFormat) -> Option<For
     };
 
     let ranges = unsafe { format.videoSupportedFrameRateRanges() };
-    let frame_rate_ranges: Vec<FrameRateRange> = ranges
+    let frame_rate_ranges: Vec<_> = ranges
         .iter()
         .map(|r| {
             let min_rate = unsafe { r.minFrameRate() };
@@ -93,11 +93,12 @@ pub(crate) fn format_to_descriptor(format: &AVCaptureDeviceFormat) -> Option<For
         })
         .collect();
 
-    Some(FormatDescriptor {
-        pixel_format,
-        size,
-        frame_rate_ranges,
-    })
+    let descriptors: Vec<_> = pixel_format
+        .into_iter()
+        .flat_map(move |pf| FormatDescriptor::from_ranges(pf, size, frame_rate_ranges.clone()))
+        .collect();
+
+    descriptors.into_iter()
 }
 
 pub(crate) fn fourcc_to_pixel_format(fourcc: u32) -> Option<PixelFormat> {
@@ -148,12 +149,12 @@ impl CameraDevice for MacosCameraDevice {
         &self.name_cache
     }
 
-    fn supported_formats(&self) -> Result<Vec<FormatDescriptor>, Self::Error> {
-        let formats = unsafe { self.device.formats() };
-        Ok(formats
+    fn supported_formats(&self) -> Result<impl Iterator<Item = FormatDescriptor>, Self::Error> {
+        let formats: Vec<_> = unsafe { self.device.formats() }
             .iter()
-            .filter_map(|f| format_to_descriptor(&f))
-            .collect())
+            .flat_map(|f| format_to_descriptors(&f))
+            .collect();
+        Ok(formats.into_iter())
     }
 
     fn open(self, config: &StreamConfig) -> Result<Self::Stream, Self::Error> {

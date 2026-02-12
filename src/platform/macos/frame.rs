@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use core::ffi::c_void;
 
 use objc2_core_video::{
     CVPixelBuffer, CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane,
@@ -73,7 +73,7 @@ impl<'a> MacosFrame<'a> {
                 vec![]
             } else {
                 let len = bytes_per_row * height;
-                let data = unsafe { std::slice::from_raw_parts(base as *const u8, len) };
+                let data = unsafe { core::slice::from_raw_parts(base as *const u8, len) };
                 vec![Plane {
                     data,
                     bytes_per_row,
@@ -89,7 +89,7 @@ impl<'a> MacosFrame<'a> {
                     let bytes_per_row = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, i);
                     let h = CVPixelBufferGetHeightOfPlane(pixel_buffer, i);
                     let len = bytes_per_row * h;
-                    let data = unsafe { std::slice::from_raw_parts(base as *const u8, len) };
+                    let data = unsafe { core::slice::from_raw_parts(base as *const u8, len) };
                     Some(Plane {
                         data,
                         bytes_per_row,

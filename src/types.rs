@@ -1,9 +1,7 @@
-#![allow(unused)]
+use arrayvec::ArrayVec;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+/// Maximum number of frame rate ranges per format descriptor.
+const MAX_FRAME_RATE_RANGES: usize = 8;
 
 /// Pixel formats encountered across platforms.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -44,12 +42,50 @@ pub struct FrameRateRange {
 }
 
 /// Describes a supported camera format.
-#[cfg(feature = "alloc")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormatDescriptor {
     pub pixel_format: PixelFormat,
     pub size: Size,
-    pub frame_rate_ranges: Vec<FrameRateRange>,
+    frame_rate_ranges: ArrayVec<FrameRateRange, MAX_FRAME_RATE_RANGES>,
+}
+
+impl FormatDescriptor {
+    /// Create descriptors for a given format, automatically splitting across
+    /// multiple [`FormatDescriptor`] values if the number of frame rate
+    /// ranges exceeds the inline capacity.
+    ///
+    /// Most formats have only a handful of frame rate ranges, so this
+    /// typically yields a single descriptor.
+    pub(crate) fn from_ranges(
+        pixel_format: PixelFormat,
+        size: Size,
+        frame_rate_ranges: impl IntoIterator<Item = FrameRateRange>,
+    ) -> impl Iterator<Item = Self> {
+        let mut iter = frame_rate_ranges.into_iter();
+        core::iter::from_fn(move || {
+            let mut chunk = ArrayVec::new();
+            for range in iter.by_ref() {
+                chunk.push(range);
+                if chunk.is_full() {
+                    break;
+                }
+            }
+            if chunk.is_empty() {
+                None
+            } else {
+                Some(FormatDescriptor {
+                    pixel_format,
+                    size,
+                    frame_rate_ranges: chunk,
+                })
+            }
+        })
+    }
+
+    /// The frame rate ranges supported by this format.
+    pub fn frame_rate_ranges(&self) -> &[FrameRateRange] {
+        &self.frame_rate_ranges
+    }
 }
 
 /// Configuration for opening a camera stream.

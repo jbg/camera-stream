@@ -25,12 +25,8 @@ use crate::types::StreamConfig;
 
 /// Catch Objective-C exceptions and convert them to our Error type.
 fn catch_objc<R>(f: impl FnOnce() -> R + std::panic::UnwindSafe) -> Result<R, Error> {
-    objc2::exception::catch(f).map_err(|exception| {
-        let msg = exception
-            .map(|e| e.to_string())
-            .unwrap_or_else(|| "unknown Objective-C exception".into());
-        Error::Platform(PlatformError::Message(msg))
-    })
+    objc2::exception::catch(f)
+        .map_err(|exception| Error::Platform(PlatformError::ObjCException(exception)))
 }
 
 type FrameCallback = Box<dyn FnMut(&MacosFrame<'_>) + Send + 'static>;
@@ -124,7 +120,7 @@ impl MacosCameraStream {
 
         // Create device input
         let input = unsafe { AVCaptureDeviceInput::deviceInputWithDevice_error(&device) }
-            .map_err(|e| Error::Platform(PlatformError::Message(e.to_string())))?;
+            .map_err(|e| Error::Platform(PlatformError::NsError(e)))?;
 
         // Create video data output
         let output = unsafe { AVCaptureVideoDataOutput::new() };
@@ -176,7 +172,7 @@ impl MacosCameraStream {
             if !session.canAddInput(&input) {
                 session.commitConfiguration();
                 return Err(Error::Platform(PlatformError::Message(
-                    "cannot add input to session".into(),
+                    "cannot add input to session",
                 )));
             }
             session.addInput(&input);
@@ -185,7 +181,7 @@ impl MacosCameraStream {
             if !session.canAddOutput(&output) {
                 session.commitConfiguration();
                 return Err(Error::Platform(PlatformError::Message(
-                    "cannot add output to session".into(),
+                    "cannot add output to session",
                 )));
             }
             session.addOutput(&output);
@@ -199,7 +195,7 @@ impl MacosCameraStream {
         // unlock before startRunning the session's preset overrides
         // our format choice.
         unsafe { device.lockForConfiguration() }
-            .map_err(|e| Error::Platform(PlatformError::Message(e.to_string())))?;
+            .map_err(|e| Error::Platform(PlatformError::NsError(e)))?;
 
         catch_objc(AssertUnwindSafe(|| unsafe {
             device.setActiveFormat(&matched);

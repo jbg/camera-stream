@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use core::ffi::c_void;
 
 use objc2_av_foundation::{AVCaptureDevice, AVCaptureExposureMode, AVCaptureFocusMode};
 use objc2_core_foundation::CGPoint;
@@ -36,12 +36,12 @@ pub trait MacosCameraDeviceExt {
     fn lock_for_configuration(&self) -> Result<ConfigLockGuard<'_>, Error>;
 
     // Focus
-    fn focus_modes(&self) -> Vec<MacosFocusMode>;
+    fn focus_modes(&self) -> impl Iterator<Item = MacosFocusMode>;
     fn set_focus_mode(&self, mode: MacosFocusMode) -> Result<(), Error>;
     fn set_focus_point(&self, x: f64, y: f64) -> Result<(), Error>;
 
     // Exposure
-    fn exposure_modes(&self) -> Vec<MacosExposureMode>;
+    fn exposure_modes(&self) -> impl Iterator<Item = MacosExposureMode>;
     fn set_exposure_mode(&self, mode: MacosExposureMode) -> Result<(), Error>;
     fn set_exposure_point(&self, x: f64, y: f64) -> Result<(), Error>;
     fn set_exposure_target_bias(&self, bias: f32) -> Result<(), Error>;
@@ -64,25 +64,21 @@ pub trait MacosCameraDeviceExt {
 impl MacosCameraDeviceExt for MacosCameraDevice {
     fn lock_for_configuration(&self) -> Result<ConfigLockGuard<'_>, Error> {
         unsafe { self.device.lockForConfiguration() }
-            .map_err(|e| Error::Platform(PlatformError::Message(e.to_string())))?;
+            .map_err(|e| Error::Platform(PlatformError::NsError(e)))?;
         Ok(ConfigLockGuard {
             device: &self.device,
         })
     }
 
-    fn focus_modes(&self) -> Vec<MacosFocusMode> {
-        let mut modes = Vec::new();
-        let candidates = [
+    fn focus_modes(&self) -> impl Iterator<Item = MacosFocusMode> {
+        let device = &self.device;
+        [
             AVCaptureFocusMode(0), // Locked
             AVCaptureFocusMode(1), // AutoFocus
             AVCaptureFocusMode(2), // ContinuousAutoFocus
-        ];
-        for mode in &candidates {
-            if unsafe { self.device.isFocusModeSupported(*mode) } {
-                modes.push(*mode);
-            }
-        }
-        modes
+        ]
+        .into_iter()
+        .filter(move |mode| unsafe { device.isFocusModeSupported(*mode) })
     }
 
     fn set_focus_mode(&self, mode: MacosFocusMode) -> Result<(), Error> {
@@ -94,7 +90,7 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
     fn set_focus_point(&self, x: f64, y: f64) -> Result<(), Error> {
         if !unsafe { self.device.isFocusPointOfInterestSupported() } {
             return Err(Error::Platform(PlatformError::Message(
-                "focus point of interest not supported".into(),
+                "focus point of interest not supported",
             )));
         }
         let _guard = self.lock_for_configuration()?;
@@ -104,20 +100,16 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
         Ok(())
     }
 
-    fn exposure_modes(&self) -> Vec<MacosExposureMode> {
-        let mut modes = Vec::new();
-        let candidates = [
+    fn exposure_modes(&self) -> impl Iterator<Item = MacosExposureMode> {
+        let device = &self.device;
+        [
             AVCaptureExposureMode(0), // Locked
             AVCaptureExposureMode(1), // AutoExpose
             AVCaptureExposureMode(2), // ContinuousAutoExposure
             AVCaptureExposureMode(3), // Custom
-        ];
-        for mode in &candidates {
-            if unsafe { self.device.isExposureModeSupported(*mode) } {
-                modes.push(*mode);
-            }
-        }
-        modes
+        ]
+        .into_iter()
+        .filter(move |mode| unsafe { device.isExposureModeSupported(*mode) })
     }
 
     fn set_exposure_mode(&self, mode: MacosExposureMode) -> Result<(), Error> {
@@ -129,7 +121,7 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
     fn set_exposure_point(&self, x: f64, y: f64) -> Result<(), Error> {
         if !unsafe { self.device.isExposurePointOfInterestSupported() } {
             return Err(Error::Platform(PlatformError::Message(
-                "exposure point of interest not supported".into(),
+                "exposure point of interest not supported",
             )));
         }
         let _guard = self.lock_for_configuration()?;
@@ -151,7 +143,7 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
     fn set_white_balance_mode(&self, mode: MacosWhiteBalanceMode) -> Result<(), Error> {
         if !unsafe { self.device.isWhiteBalanceModeSupported(mode) } {
             return Err(Error::Platform(PlatformError::Message(
-                "white balance mode not supported".into(),
+                "white balance mode not supported",
             )));
         }
         let _guard = self.lock_for_configuration()?;
@@ -166,7 +158,7 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
     fn set_torch_mode(&self, mode: MacosTorchMode) -> Result<(), Error> {
         if !unsafe { self.device.isTorchModeSupported(mode) } {
             return Err(Error::Platform(PlatformError::Message(
-                "torch mode not supported".into(),
+                "torch mode not supported",
             )));
         }
         let _guard = self.lock_for_configuration()?;
