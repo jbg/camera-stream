@@ -8,7 +8,7 @@ A cross-platform Rust library for streaming frames from cameras. Currently suppo
 - **Zero-copy frame delivery** — frames are borrowed directly from the platform's pixel buffer within a callback scope
 - **Configurable streams** — choose pixel format, size, and frame rate when opening a stream
 - **Platform-specific extensions** — access advanced controls on macOS (focus, exposure, white balance, torch, zoom)
-- **`no_std` support** — core types (`PixelFormat`, `Size`, `FrameRate`, `Frame` trait) are available without `std`; use `default-features = false` and optionally enable the `alloc` feature
+- **`no_std` support** — all core types and traits are available without `std` or `alloc`; only the platform backends require `std`
 
 ## Supported platforms
 
@@ -24,7 +24,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-camera-stream = "0.1"
+camera-stream = "0.3"
 ```
 
 ### Example: capture frames
@@ -40,7 +40,7 @@ use camera_stream::stream::CameraStream;
 use camera_stream::platform::macos::device::MacosCameraManager;
 
 fn main() {
-    let manager = MacosCameraManager::new();
+    let manager = MacosCameraManager::default();
 
     // Use the default camera
     let device = manager
@@ -51,13 +51,13 @@ fn main() {
     println!("Using: {} ({})", device.name(), device.id());
 
     // Pick the first supported format
-    let formats = device.supported_formats().expect("failed to get formats");
-    let f = formats.first().expect("no supported formats");
+    let mut formats = device.supported_formats().expect("failed to get formats");
+    let f = formats.next().expect("no supported formats");
 
     let config = camera_stream::StreamConfig {
         pixel_format: f.pixel_format,
         size: f.size,
-        frame_rate: f.frame_rate_ranges[0].max,
+        frame_rate: f.frame_rate_ranges().first().unwrap().max,
     };
 
     let mut stream = device.open(&config).expect("failed to open stream");
@@ -108,6 +108,8 @@ The library is built around three core traits:
 
 Frames are delivered through the `Frame` trait, which provides access to pixel format, size, timestamp, and per-plane image data.
 
+All traits use `core::error::Error` bounds rather than `std::error::Error`, so they are usable in `no_std` environments. Methods that enumerate devices or formats return `impl Iterator` rather than `Vec`, avoiding heap allocation in the trait interface.
+
 ### Platform-specific extensions (macOS)
 
 Import the `MacosCameraDeviceExt` trait from `camera_stream::platform::macos::ext` to access:
@@ -120,6 +122,10 @@ Import the `MacosCameraDeviceExt` trait from `camera_stream::platform::macos::ex
 - **Frame rate** — change active frame rate on a running device
 
 All mutating operations acquire an `AVCaptureDevice` configuration lock automatically.
+
+### Error handling
+
+Platform errors preserve the native error objects (e.g. `NSError` on macOS) rather than eagerly converting to strings. Use `Display` (or `to_string()`) to get a human-readable description on demand.
 
 ## Pixel formats
 
@@ -135,8 +141,13 @@ All mutating operations acquire an `AVCaptureDevice` configuration lock automati
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `std` | ✅ | Enables device/stream/error types (implies `alloc`) |
-| `alloc` | via `std` | Enables `FormatDescriptor` and `Vec`-based APIs |
+| `std` | ✅ | Enables platform backends (macOS AVFoundation, etc.) |
+
+Without `std`, all core types, traits (`CameraManager`, `CameraDevice`, `CameraStream`, `Frame`), and error types are still available — only the concrete platform implementations require `std`.
+
+## Minimum Rust version
+
+1.85 (edition 2024)
 
 ## License
 
