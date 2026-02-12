@@ -60,7 +60,7 @@ fn main() {
         let config =
             if let Some(f) = formats.first() {
                 let rate = f.frame_rate_ranges().first().map(|r| r.max).unwrap_or(
-                    camera_stream::FrameRate {
+                    camera_stream::Ratio {
                         numerator: 30000,
                         denominator: 1000,
                     },

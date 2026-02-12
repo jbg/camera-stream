@@ -87,8 +87,8 @@ pub(crate) fn format_to_descriptors(
             let min_rate = unsafe { r.minFrameRate() };
             let max_rate = unsafe { r.maxFrameRate() };
             FrameRateRange {
-                min: f64_to_frame_rate(min_rate),
-                max: f64_to_frame_rate(max_rate),
+                min: f64_to_ratio(min_rate),
+                max: f64_to_ratio(max_rate),
             }
         })
         .collect();
@@ -126,12 +126,12 @@ pub(crate) fn pixel_format_to_fourcc(pf: &PixelFormat) -> u32 {
     }
 }
 
-fn f64_to_frame_rate(fps: f64) -> FrameRate {
+fn f64_to_ratio(fps: f64) -> Ratio {
     // Express as integer ratio: fps ≈ numerator/1
     // For common rates, use 1000-based denominator for precision.
     let denominator = 1000u32;
     let numerator = (fps * denominator as f64).round() as u32;
-    FrameRate {
+    Ratio {
         numerator,
         denominator,
     }

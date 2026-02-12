@@ -18,16 +18,11 @@ use objc2_core_video::{
 use objc2_foundation::{NSDictionary, NSNumber, NSObjectProtocol, NSString};
 
 use crate::error::{Error, PlatformError};
+use crate::platform::macos::catch_objc;
 use crate::platform::macos::device::pixel_format_to_fourcc;
 use crate::platform::macos::frame::{MacosFrame, MacosTimestamp};
 use crate::stream::CameraStream;
 use crate::types::StreamConfig;
-
-/// Catch Objective-C exceptions and convert them to our Error type.
-fn catch_objc<R>(f: impl FnOnce() -> R + std::panic::UnwindSafe) -> Result<R, Error> {
-    objc2::exception::catch(f)
-        .map_err(|exception| Error::Platform(PlatformError::ObjCException(exception)))
-}
 
 type FrameCallback = Box<dyn FnMut(&MacosFrame<'_>) + Send + 'static>;
 
@@ -199,9 +194,16 @@ impl MacosCameraStream {
 
         catch_objc(AssertUnwindSafe(|| unsafe {
             device.setActiveFormat(&matched);
-            device.setActiveVideoMinFrameDuration(frame_duration);
-            device.setActiveVideoMaxFrameDuration(frame_duration);
         }))?;
+
+        // Frame-duration control is not supported on all devices (e.g.
+        // Continuity Camera), so treat failures as non-fatal.
+        let _ = catch_objc(AssertUnwindSafe(|| unsafe {
+            device.setActiveVideoMinFrameDuration(frame_duration);
+        }));
+        let _ = catch_objc(AssertUnwindSafe(|| unsafe {
+            device.setActiveVideoMaxFrameDuration(frame_duration);
+        }));
 
         Ok(MacosCameraStream {
             session,

@@ -21,14 +21,17 @@ pub struct Size {
     pub height: u32,
 }
 
-/// Frame rate as a rational number.
+/// A rational number (numerator / denominator).
+///
+/// Used to represent frame rates (e.g. 30000/1000 = 30 fps) and
+/// frame durations (e.g. 1000/30000 ≈ 0.033 s).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FrameRate {
+pub struct Ratio {
     pub numerator: u32,
     pub denominator: u32,
 }
 
-impl FrameRate {
+impl Ratio {
     pub fn as_f64(&self) -> f64 {
         self.numerator as f64 / self.denominator as f64
     }
@@ -37,8 +40,8 @@ impl FrameRate {
 /// Range of supported frame rates.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FrameRateRange {
-    pub min: FrameRate,
-    pub max: FrameRate,
+    pub min: Ratio,
+    pub max: Ratio,
 }
 
 /// Describes a supported camera format.
@@ -93,5 +96,5 @@ impl FormatDescriptor {
 pub struct StreamConfig {
     pub pixel_format: PixelFormat,
     pub size: Size,
-    pub frame_rate: FrameRate,
+    pub frame_rate: Ratio,
 }

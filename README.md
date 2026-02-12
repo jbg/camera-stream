@@ -24,7 +24,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-camera-stream = "0.3"
+camera-stream = "0.4"
 ```
 
 ### Example: capture frames
@@ -119,7 +119,7 @@ Import the `MacosCameraDeviceExt` trait from `camera_stream::platform::macos::ex
 - **White balance** — set mode
 - **Torch** — check availability and set mode
 - **Zoom** — query max factor and set zoom level
-- **Frame rate** — change active frame rate on a running device
+- **Frame duration** — set min/max video frame duration on the active format
 
 All mutating operations acquire an `AVCaptureDevice` configuration lock automatically.
 
