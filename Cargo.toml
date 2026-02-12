@@ -1,0 +1,57 @@
+[package]
+name = "camera-stream"
+version = "0.1.0"
+authors = ["Jasper Hugo <jasper@jasperhugo.com>"]
+edition = "2024"
+description = "A cross-platform library for streaming frames from cameras, initially supporting only macOS"
+repository = "https://github.com/jbg/camera-stream"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
+[dependencies]
+thiserror = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", features = ["exception"] }
+objc2-foundation = { version = "0.3", features = [
+    "NSString",
+    "NSArray",
+    "NSError",
+    "NSObject",
+    "NSObjCRuntime",
+    "NSValue",
+] }
+objc2-core-foundation = { version = "0.3", features = ["CFCGTypes"] }
+objc2-av-foundation = { version = "0.3", features = [
+    "AVCaptureDevice",
+    "AVCaptureSession",
+    "AVCaptureInput",
+    "AVCaptureOutput",
+    "AVCaptureOutputBase",
+    "AVCaptureVideoDataOutput",
+    "AVCaptureSessionPreset",
+    "AVMediaFormat",
+    "objc2-core-media",
+] }
+objc2-core-media = { version = "0.3", features = [
+    "CMSampleBuffer",
+    "CMTime",
+    "CMFormatDescription",
+] }
+objc2-core-video = { version = "0.3", features = [
+    "CVPixelBuffer",
+    "CVBuffer",
+    "CVImageBuffer",
+    "CVBase",
+    "CVReturn",
+] }
+block2 = "0.6"
+dispatch2 = "0.3"
+
+[[example]]
+name = "capture"
+path = "examples/capture.rs"
