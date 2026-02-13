@@ -1,9 +1,9 @@
 use core::fmt;
 
 #[cfg(target_os = "macos")]
-use objc2::rc::Retained;
-#[cfg(target_os = "macos")]
 use objc2::exception::Exception;
+#[cfg(target_os = "macos")]
+use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
 use objc2_foundation::NSError;
 

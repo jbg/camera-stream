@@ -17,9 +17,7 @@ impl CameraManager for MacosCameraManager {
 
     fn discover_devices(&self) -> Result<impl Iterator<Item = Self::Device>, Self::Error> {
         let media_type = unsafe { AVMediaTypeVideo }.ok_or_else(|| {
-            Error::Platform(PlatformError::Message(
-                "AVMediaTypeVideo not available",
-            ))
+            Error::Platform(PlatformError::Message("AVMediaTypeVideo not available"))
         })?;
 
         #[allow(deprecated)]
@@ -33,9 +31,7 @@ impl CameraManager for MacosCameraManager {
 
     fn default_device(&self) -> Result<Option<Self::Device>, Self::Error> {
         let media_type = unsafe { AVMediaTypeVideo }.ok_or_else(|| {
-            Error::Platform(PlatformError::Message(
-                "AVMediaTypeVideo not available",
-            ))
+            Error::Platform(PlatformError::Message("AVMediaTypeVideo not available"))
         })?;
 
         let device = unsafe { AVCaptureDevice::defaultDeviceWithMediaType(media_type) };

@@ -37,7 +37,10 @@ fn main() {
         println!("\nUsing: {} ({})", device.name(), device.id());
 
         // Print supported formats
-        let formats: Vec<_> = device.supported_formats().expect("failed to get formats").collect();
+        let formats: Vec<_> = device
+            .supported_formats()
+            .expect("failed to get formats")
+            .collect();
         println!("\nSupported formats ({} total):", formats.len());
         for (i, f) in formats.iter().take(10).enumerate() {
             println!(
@@ -57,23 +60,24 @@ fn main() {
         }
 
         // Pick first format or a reasonable default
-        let config =
-            if let Some(f) = formats.first() {
-                let rate = f.frame_rate_ranges().first().map(|r| r.max).unwrap_or(
-                    camera_stream::Ratio {
+        let config = if let Some(f) = formats.first() {
+            let rate =
+                f.frame_rate_ranges()
+                    .first()
+                    .map(|r| r.max)
+                    .unwrap_or(camera_stream::Ratio {
                         numerator: 30000,
                         denominator: 1000,
-                    },
-                );
-                camera_stream::StreamConfig {
-                    pixel_format: f.pixel_format,
-                    size: f.size,
-                    frame_rate: rate,
-                }
-            } else {
-                println!("No supported formats found.");
-                return;
-            };
+                    });
+            camera_stream::StreamConfig {
+                pixel_format: f.pixel_format,
+                size: f.size,
+                frame_rate: rate,
+            }
+        } else {
+            println!("No supported formats found.");
+            return;
+        };
 
         println!(
             "\nOpening with {:?} {}x{} @ {:.1} fps",

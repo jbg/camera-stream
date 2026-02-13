@@ -1,8 +1,8 @@
-use core::ffi::c_void;
 use std::panic::AssertUnwindSafe;
 
 use objc2_av_foundation::{AVCaptureDevice, AVCaptureExposureMode, AVCaptureFocusMode};
 use objc2_core_foundation::CGPoint;
+use objc2_core_video::CVPixelBuffer;
 
 use crate::error::{Error, PlatformError};
 use crate::platform::macos::catch_objc;
@@ -86,7 +86,9 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
 
     fn set_focus_mode(&self, mode: MacosFocusMode) -> Result<(), Error> {
         let _guard = self.lock_for_configuration()?;
-        catch_objc(AssertUnwindSafe(|| unsafe { self.device.setFocusMode(mode) }))
+        catch_objc(AssertUnwindSafe(|| unsafe {
+            self.device.setFocusMode(mode)
+        }))
     }
 
     fn set_focus_point(&self, x: f64, y: f64) -> Result<(), Error> {
@@ -115,7 +117,9 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
 
     fn set_exposure_mode(&self, mode: MacosExposureMode) -> Result<(), Error> {
         let _guard = self.lock_for_configuration()?;
-        catch_objc(AssertUnwindSafe(|| unsafe { self.device.setExposureMode(mode) }))
+        catch_objc(AssertUnwindSafe(|| unsafe {
+            self.device.setExposureMode(mode)
+        }))
     }
 
     fn set_exposure_point(&self, x: f64, y: f64) -> Result<(), Error> {
@@ -145,7 +149,9 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
             )));
         }
         let _guard = self.lock_for_configuration()?;
-        catch_objc(AssertUnwindSafe(|| unsafe { self.device.setWhiteBalanceMode(mode) }))
+        catch_objc(AssertUnwindSafe(|| unsafe {
+            self.device.setWhiteBalanceMode(mode)
+        }))
     }
 
     fn has_torch(&self) -> bool {
@@ -159,7 +165,9 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
             )));
         }
         let _guard = self.lock_for_configuration()?;
-        catch_objc(AssertUnwindSafe(|| unsafe { self.device.setTorchMode(mode) }))
+        catch_objc(AssertUnwindSafe(|| unsafe {
+            self.device.setTorchMode(mode)
+        }))
     }
 
     fn max_zoom_factor(&self) -> f64 {
@@ -168,7 +176,9 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
 
     fn set_zoom_factor(&self, factor: f64) -> Result<(), Error> {
         let _guard = self.lock_for_configuration()?;
-        catch_objc(AssertUnwindSafe(|| unsafe { self.device.setVideoZoomFactor(factor) }))
+        catch_objc(AssertUnwindSafe(|| unsafe {
+            self.device.setVideoZoomFactor(factor)
+        }))
     }
 
     fn set_active_video_min_frame_duration(&self, duration: Ratio) -> Result<(), Error> {
@@ -200,11 +210,16 @@ impl MacosCameraDeviceExt for MacosCameraDevice {
 
 /// macOS-specific frame data.
 pub trait MacosFrameExt {
-    fn sample_buffer_ptr(&self) -> *const c_void;
+    /// Access the underlying `CVPixelBuffer`.
+    ///
+    /// The buffer is valid for the lifetime of the frame (i.e. the callback
+    /// scope).  To keep it alive longer, retain it with
+    /// `CFRetained::retain(pixel_buffer)`.
+    fn pixel_buffer(&self) -> &CVPixelBuffer;
 }
 
 impl MacosFrameExt for MacosFrame<'_> {
-    fn sample_buffer_ptr(&self) -> *const c_void {
-        self.pixel_buffer_ptr()
+    fn pixel_buffer(&self) -> &CVPixelBuffer {
+        self.pixel_buffer_ref()
     }
 }

@@ -6,9 +6,9 @@ pub mod types;
 
 pub mod device;
 pub mod error;
-pub mod stream;
 #[cfg(feature = "std")]
 pub mod platform;
+pub mod stream;
 
 // Re-exports
 #[doc(inline)]

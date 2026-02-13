@@ -1,5 +1,3 @@
-use core::ffi::c_void;
-
 use objc2_core_video::{
     CVPixelBuffer, CVPixelBufferGetBaseAddress, CVPixelBufferGetBaseAddressOfPlane,
     CVPixelBufferGetBytesPerRow, CVPixelBufferGetBytesPerRowOfPlane, CVPixelBufferGetHeight,
@@ -107,9 +105,9 @@ impl<'a> MacosFrame<'a> {
         }
     }
 
-    /// Raw pointer to the backing `CVPixelBuffer` (escape hatch).
-    pub fn pixel_buffer_ptr(&self) -> *const c_void {
-        self.pixel_buffer as *const CVPixelBuffer as *const c_void
+    /// Access the backing `CVPixelBuffer`.
+    pub fn pixel_buffer_ref(&self) -> &CVPixelBuffer {
+        self.pixel_buffer
     }
 }
 
